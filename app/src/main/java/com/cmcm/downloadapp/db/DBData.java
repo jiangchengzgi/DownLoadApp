@@ -35,6 +35,8 @@ public class DBData {
                 +TABLE_NAME;
         /** 根据文件下载路径删除SQL表记录 */
         public static final String SQL_DELETE_FILEDOWNLOAD="DELETE FROM "+TABLE_NAME+" WHERE "+FILE_DOWNLOAD_PATH+"=?";
+        /** 根据下载路径查找线程id和已下载的文件长度 */
+        public static final String SQL_SELECT_DOWNLOADLENGTH="SELECT "+THREAD_ID+","+DOWNLOAD_LENGTH+" FROM "+TABLE_NAME+" WHERE "+FILE_DOWNLOAD_PATH+"=?";
     }
     /* ====== SQL END =======*/
 }

@@ -10,7 +10,11 @@ import com.cmcm.downloadapp.thread.DownloadThread;
 
 import java.io.File;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 文件下载工具类
@@ -45,11 +49,10 @@ public class FileDownloader {
 		this.mDownloadListenner=pDownloadListener;
 		this.mThreads=new DownloadThread[pThreaNum];
 		mFService=new FileService(mContext);
-		getConnection(pDownloadUrl);
+		getConnection(pDownloadUrl);//根据url创建网络连接
 		if(!pSaveFileDir.exists()){
 			pSaveFileDir.mkdirs();
 		}
-		mDownloadFileName="";
 	}
 	/**
 	 * 建立网络连接
@@ -62,6 +65,85 @@ public class FileDownloader {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	/**
+	 * 下载文件
+	 */
+	private void downloadFile(HttpURLConnection pConnection,String pReferer,File pPath){
+		try {
+			pConnection.setRequestMethod("GET");
+			pConnection.setConnectTimeout(60*1000);
+			/** 设置请求头属性 */
+			pConnection.setRequestProperty("Accept","*/*");//接收文件类型是任意类型
+			pConnection.setRequestProperty("Referer",pReferer);//告诉服务器我是从哪个链接过来的
+			pConnection.setRequestProperty("Connection","Keep-Alive");//建议保持长时间连接
+			pConnection.connect();
+			int _ResponseCode=pConnection.getResponseCode();
+			if(_ResponseCode==200){
+				mFileSize=pConnection.getContentLength();//获得文件大小(inputStream.available())
+				if(mFileSize<0){
+					return;
+				}
+				getFileName(pConnection,true);
+				mSaveFile=new File(pPath,mDownloadFileName);
+				SparseIntArray _ThreadDownloadSize=mFService.getData(mDownloadUrl);
+				/** 将各线程下载的长度缓存在mThreadDownloadSizes中*/
+				int _Size=_ThreadDownloadSize.size();
+				for(int i=0;i<_Size;i++){
+					mThreadDownloadSizes.put(_ThreadDownloadSize.keyAt(i),_ThreadDownloadSize.valueAt(i));
+				}
+				/** 计算所有线程下载的文件长度总和 */
+				if(mThreadDownloadSizes.size()==mThreads.length){
+					for(int i=0;i<mThreadDownloadSizes.size();i++){
+						mDownloadSize+=mThreadDownloadSizes.get(i+1);
+					}
+				}
+				/** 每条线程下载的文件长度 */
+				mThreadDownloadSize=(mFileSize%mThreads.length)==0?mFileSize/mThreads.length:mFileSize/mThreads.length+1;
+			}
+			else if(_ResponseCode==302||_ResponseCode==301){
+				getFileName(pConnection,false);
+				String _Location=pConnection.getHeaderField("location");
+				HttpURLConnection _Connection= (HttpURLConnection) new URL(_Location).openConnection();
+				_Connection.setInstanceFollowRedirects(true);
+				downloadFile(_Connection,_Location,pPath);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	/**
+	 * 根据网络连接对象获取文件名
+	 */
+	public void getFileName(HttpURLConnection pConnection,boolean pLast){
+		String _FileName="";
+		for(int i=0;;i++){
+			String _Header=pConnection.getHeaderField(i);//获取请求头
+			if(_Header==null){
+				break;
+			}
+			if("content-disposition".equals(pConnection.getHeaderFieldKey(i).toLowerCase())){
+				Matcher _Matcher= Pattern.compile(".*=_FileName=(.*)").matcher(_Header.toLowerCase());
+				if(_Matcher.find()){
+					_FileName=_Matcher.group(1).replace("\"","");
+					break;
+				}
+			}
+		}
+		if(_FileName!=null&&!_FileName.isEmpty()){
+			mDownloadFileName=_FileName;
+		}
+		if(!pLast){
+			return;
+		}
+		if(!mDownloadFileName.isEmpty()){//mDownloadFileName不为空，结束
+			return;
+		}
+		_FileName=mDownloadUrl.substring(mDownloadUrl.lastIndexOf('/')+1);
+		if(_FileName==null||_FileName.trim().isEmpty()||_FileName.contains("?")){
+			_FileName= UUID.randomUUID().toString();
+		}
+		mDownloadFileName=_FileName;
 	}
 
 	/**

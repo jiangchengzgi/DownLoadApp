@@ -55,7 +55,7 @@ public class DownLoadService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        mManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);//获得系统通知管理器
+        //mManager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);//获得系统通知管理器
         mList=new ArrayList<DownLoadInfo>();
     }
 
@@ -109,7 +109,7 @@ public class DownLoadService extends Service {
                     @Override
                     public void onDownloadSize(int mSize, int mAll) {
                         //计算下载进度百分比
-                        float _Num=mSize/mAll;
+                        /*float _Num=mSize/mAll;
                         int _Percent= (int) (_Num*100);
                         if(_Percent>=100&&mSize<mAll){
                             _Percent=99;
@@ -122,14 +122,14 @@ public class DownLoadService extends Service {
                             _Message.obj=pInfo;
                             _Message.getData().putInt("percent",_Percent);
                             mHandler.sendMessage(_Message);
-                        }
+                        }*/
                     }
                     @Override
                     public void onFinished() {
-                        Message _Message=new Message();
+                       /* Message _Message=new Message();
                         _Message.what=HANDLE_FINISHED;
                         _Message.obj=pInfo;
-                        mHandler.sendMessage(_Message);
+                        mHandler.sendMessage(_Message);*/
                     }
                 };
                 FileDownloader _FileDownloader=new FileDownloader(mContext,pInfo.getmUrl(),pPath,1,_Listener);//文件下载器
@@ -161,7 +161,7 @@ public class DownLoadService extends Service {
             mList.remove(pInfo);
         }
         if(mList.size()<1){
-            stopSelf();
+            stopSelf();//停止服务
         }
     }
     private Intent getIntent(DownLoadInfo pDinfo){

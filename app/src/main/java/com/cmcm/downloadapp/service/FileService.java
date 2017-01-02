@@ -1,7 +1,10 @@
 package com.cmcm.downloadapp.service;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.SparseArray;
+import android.util.SparseIntArray;
 
 import com.cmcm.downloadapp.db.DBData;
 import com.cmcm.downloadapp.db.DBOpenHelper;
@@ -29,6 +32,20 @@ public class FileService {
         } finally {
             mLock.unlock();
         }
+    }
+    /**
+     * 已下载的文件长度
+     */
+    public SparseIntArray getData(String pURL){
+        SQLiteDatabase _SDB=mHelper.getReadableDatabase();
+        Cursor _Cursor=_SDB.rawQuery(DBData.FileDownload_COLUMNS.SQL_SELECT_DOWNLOADLENGTH,new String[]{pURL});
+        SparseIntArray _SA=new SparseIntArray();
+        if(_Cursor.getColumnCount()>0){
+            while(_Cursor.moveToNext()){
+                _SA.put(_Cursor.getInt(0),_Cursor.getInt(1));
+            }
+        }
+        return _SA;
     }
     /**
      * 操作结束后，统一关闭数据库
